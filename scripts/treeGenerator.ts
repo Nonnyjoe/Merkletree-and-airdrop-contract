@@ -6,6 +6,7 @@ import { ethers } from "hardhat";
 import * as fs from "fs";
 import * as path from "path";
 import { parse } from 'csv-parse';
+import { any } from "hardhat/internal/core/params/argumentTypes";
 
 type AccountDetail ={
     Address: string;
@@ -64,7 +65,8 @@ async function main() {
       // create a merkle tree with the leaves
       ////////////////////////////////////////////////////////////////////////////
        const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
-       const root = tree.getRoot().toString('hex');
+       let root = tree.getRoot().toString("hex");
+       root = `0x${root}`;
        console.log(`USER'S ROOT IS ${root}`);
        
        //////////////////////////////////////////////////////////////////////////////////
@@ -84,7 +86,7 @@ async function main() {
 
         const [owner, owner2] = await ethers.getSigners();
         const AirdropToken = await ethers.getContractFactory("airdropToken");
-        const airdropToken = await AirdropToken.deploy(10000000,"NONNY", "NNY");
+        const airdropToken = await AirdropToken.deploy(10000000,"NONNY", "NNY", root);
         await airdropToken.deployed();
 
         console.log(`airdropToken Address is ${airdropToken.address} `);
@@ -101,14 +103,22 @@ async function main() {
 
         console.log(root);
         // const arryfyRoot = ethers.utils.arrayify(root);
-        console.log(`testing`);
-        const setMerkleRoot = await airdropToken.connect(impersonatedSigner).setMerkleRoot(root);
+       // console.log(`testing`);
+       // const setMerkleRoot = await airdropToken.connect(impersonatedSigner).setMerkleRoot(root);
         
         console.log(`testing22`);
 
         //////////////////////////////////////////////////////////////////////
         // claim airdrop
         ///////////////////////////////////////////////////////////////////
+function clipProof(proofs:any) {
+  let nodes:string[] = [];
+ for(let i = 0; i < proofs.length; i++){
+  // console.log(proofs[i]);
+  nodes.push(`0x${proofs[i].data.toString('hex')}`);
+ }
+return nodes;
+}
 
         let userBallance = await airdropToken.connect(impersonatedSigner).balanceOf(impersonatedSigner.address);
         console.log(`USER BALANCE BEFOR CLAIMING IS ${userBallance}`);
@@ -120,7 +130,10 @@ async function main() {
         console.log(`USER leaf IS ${userLeaf}`)
         console.log(`USER PROOF IS ${userProof}`)
         console.log(tree.verify(userProof, userLeaf, root)) 
-        const claimAirdrop = await airdropToken.connect(owner).claimAirdrop(userProof, `root`, userLeaf);
+        let hexProofs = clipProof(userProof);
+        console.log(hexProofs);
+        console.log(tree.verify(hexProofs, userLeaf, root)) 
+        const claimAirdrop = await airdropToken.connect(owner).claimAirdrop(hexProofs, root, userLeaf);
 
         let userBallance2 = await airdropToken.connect(impersonatedSigner).balanceOf(impersonatedSigner.address);
         console.log(`USER BALANCE AFTER CLAIMING IS ${userBallance2}`);

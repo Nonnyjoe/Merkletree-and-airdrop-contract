@@ -12,8 +12,10 @@ contract airdropToken is ERC20 {
     constructor(
         uint256 amount,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        bytes32 _merkleRoot
     ) ERC20(_name, _symbol) {
+        merkleRoot = _merkleRoot;
         admin = msg.sender;
         _mint(address(this), amount * (10 ** decimals()));
     }
@@ -45,28 +47,53 @@ contract airdropToken is ERC20 {
         (merkleRoot.length > 0) ? status = true : status = false;
     }
 
+    // function verify(
+    //     bytes32[] memory proof,
+    //     bytes32 root,
+    //     bytes32 leaf
+    // ) internal view returns (bool) {
+    //     uint256 path = proof.length;
+    //     bytes memory input = abi.encodePacked(path, proof, root, leaf);
+
+    //     bytes32 result;
+    //     bool success;
+    //     assembly {
+    //         success := staticcall(
+    //             gas(),
+    //             0x07,
+    //             add(input, 0x20),
+    //             mload(input),
+    //             result,
+    //             0x20
+    //         )
+    //     }
+
+    //     require(success, "Merkle proof verification failed");
+    //     return uint256(result) == 1;
+    // }
+
     function verify(
         bytes32[] memory proof,
         bytes32 root,
         bytes32 leaf
-    ) internal view returns (bool) {
-        uint256 path = proof.length;
-        bytes memory input = abi.encodePacked(path, proof, root, leaf);
+    ) public pure returns (bool) {
+        bytes memory input = abi.encodePacked(
+            uint256(proof.length),
+            proof,
+            root,
+            leaf
+        );
+        bytes32 hash = keccak256(input);
 
-        bytes32 result;
-        bool success;
-        assembly {
-            success := staticcall(
-                gas(),
-                0x07,
-                add(input, 0x20),
-                mload(input),
-                result,
-                0x20
-            )
+        for (uint256 i = 0; i < proof.length; i++) {
+            if (hash < proof[i]) {
+                hash = keccak256(abi.encodePacked(hash, proof[i]));
+            } else {
+                hash = keccak256(abi.encodePacked(proof[i], hash));
+            }
         }
-
-        require(success, "Merkle proof verification failed");
-        return uint256(result) == 1;
+        bool status = (hash == root);
+        require(status, "MERKLE PROOF VERIFICATION FAILED");
+        return status;
     }
 }
