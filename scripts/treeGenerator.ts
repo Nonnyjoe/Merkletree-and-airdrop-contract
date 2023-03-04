@@ -132,7 +132,7 @@ return nodes;
         console.log(tree.verify(userProof, userLeaf, root)) 
         let hexProofs = clipProof(userProof);
         console.log(hexProofs);
-        console.log(tree.verify(hexProofs, userLeaf, root)) 
+        console.log(tree.verify(hexProofs, userLeaf, root));
         const claimAirdrop = await airdropToken.connect(owner).claimAirdrop(hexProofs, root, userLeaf);
 
         let userBallance2 = await airdropToken.connect(impersonatedSigner).balanceOf(impersonatedSigner.address);

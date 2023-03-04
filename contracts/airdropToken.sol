@@ -76,7 +76,7 @@ contract airdropToken is ERC20 {
         bytes32[] memory proof,
         bytes32 root,
         bytes32 leaf
-    ) public pure returns (bool) {
+    ) internal pure returns (bool) {
         bytes memory input = abi.encodePacked(
             uint256(proof.length),
             proof,
