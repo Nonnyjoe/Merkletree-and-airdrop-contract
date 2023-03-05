@@ -47,53 +47,53 @@ contract airdropToken is ERC20 {
         (merkleRoot.length > 0) ? status = true : status = false;
     }
 
-    // function verify(
-    //     bytes32[] memory proof,
-    //     bytes32 root,
-    //     bytes32 leaf
-    // ) internal view returns (bool) {
-    //     uint256 path = proof.length;
-    //     bytes memory input = abi.encodePacked(path, proof, root, leaf);
-
-    //     bytes32 result;
-    //     bool success;
-    //     assembly {
-    //         success := staticcall(
-    //             gas(),
-    //             0x07,
-    //             add(input, 0x20),
-    //             mload(input),
-    //             result,
-    //             0x20
-    //         )
-    //     }
-
-    //     require(success, "Merkle proof verification failed");
-    //     return uint256(result) == 1;
-    // }
-
     function verify(
         bytes32[] memory proof,
         bytes32 root,
         bytes32 leaf
-    ) internal pure returns (bool) {
-        bytes memory input = abi.encodePacked(
-            uint256(proof.length),
-            proof,
-            root,
-            leaf
-        );
-        bytes32 hash = keccak256(input);
+    ) internal view returns (bool) {
+        uint256 path = proof.length;
+        bytes memory input = abi.encodePacked(path, proof, root, leaf);
 
-        for (uint256 i = 0; i < proof.length; i++) {
-            if (hash < proof[i]) {
-                hash = keccak256(abi.encodePacked(hash, proof[i]));
-            } else {
-                hash = keccak256(abi.encodePacked(proof[i], hash));
-            }
+        bytes32 result;
+        bool success;
+        assembly {
+            success := staticcall(
+                gas(),
+                0x07,
+                add(input, 0x20),
+                mload(input),
+                result,
+                0x20
+            )
         }
-        bool status = (hash == root);
-        require(status, "MERKLE PROOF VERIFICATION FAILED");
-        return status;
+
+        require(success, "Merkle proof verification failed");
+        return uint256(result) == 1;
     }
+
+    // function verify(
+    //     bytes32[] memory proof,
+    //     bytes32 root,
+    //     bytes32 leaf
+    // ) internal pure returns (bool) {
+    //     bytes memory input = abi.encodePacked(
+    //         uint256(proof.length),
+    //         proof,
+    //         root,
+    //         leaf
+    //     );
+    //     bytes32 hash = keccak256(input);
+
+    //     for (uint256 i = 0; i < proof.length; i++) {
+    //         if (hash < proof[i]) {
+    //             hash = keccak256(abi.encodePacked(hash, proof[i]));
+    //         } else {
+    //             hash = keccak256(abi.encodePacked(proof[i], hash));
+    //         }
+    //     }
+    //     bool status = (hash == root);
+    //     require(status, "MERKLE PROOF VERIFICATION FAILED");
+    //     return status;
+    // }
 }
