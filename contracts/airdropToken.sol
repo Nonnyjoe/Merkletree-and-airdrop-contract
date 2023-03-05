@@ -1,4 +1,47 @@
 // SPDX-License-Identifier: MIT
+library MerkleProofLib {
+    function verify(
+        bytes32[] calldata proof,
+        bytes32 root,
+        bytes32 leaf
+    ) internal pure returns (bool isValid) {
+        /// @solidity memory-safe-assembly
+        assembly {
+            if proof.length {
+                // Left shifting by 5 is like multiplying by 32.
+                let end := add(proof.offset, shl(5, proof.length))
+
+                // Initialize offset to the offset of the proof in calldata.
+                let offset := proof.offset
+
+                // Iterate over proof elements to compute root hash.
+                // prettier-ignore
+                for {} 1 {} {
+                    // Slot where the leaf should be put in scratch space. If
+                    // leaf > calldataload(offset): slot 32, otherwise: slot 0.
+                    let leafSlot := shl(5, gt(leaf, calldataload(offset)))
+
+                    // Store elements to hash contiguously in scratch space.
+                    // The xor puts calldataload(offset) in whichever slot leaf
+                    // is not occupying, so 0 if leafSlot is 32, and 32 otherwise.
+                    mstore(leafSlot, leaf)
+                    mstore(xor(leafSlot, 32), calldataload(offset))
+
+                    // Reuse leaf to store the hash to reduce stack operations.
+                    leaf := keccak256(0, 64) // Hash both slots of scratch space.
+
+                    offset := add(offset, 32) // Shift 1 word per cycle.
+
+                    // prettier-ignore
+                    if iszero(lt(offset, end)) { break }
+                }
+            }
+
+            isValid := eq(leaf, root) // The proof is valid if the roots match.
+        }
+    }
+}
+
 pragma solidity ^0.8.17;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
@@ -23,7 +66,7 @@ contract airdropToken is ERC20 {
     /////////////// /////////////////////////////////////////////
 
     function claimAirdrop(
-        bytes32[] memory proof,
+        bytes32[] calldata proof,
         bytes32 root,
         bytes32 leaf
     ) public {
@@ -48,52 +91,11 @@ contract airdropToken is ERC20 {
     }
 
     function verify(
-        bytes32[] memory proof,
+        bytes32[] calldata proof,
         bytes32 root,
         bytes32 leaf
-    ) internal view returns (bool) {
-        uint256 path = proof.length;
-        bytes memory input = abi.encodePacked(path, proof, root, leaf);
-
-        bytes32 result;
-        bool success;
-        assembly {
-            success := staticcall(
-                gas(),
-                0x07,
-                add(input, 0x20),
-                mload(input),
-                result,
-                0x20
-            )
-        }
-
-        require(success, "Merkle proof verification failed");
-        return uint256(result) == 1;
+    ) public pure returns (bool) {
+        bool status = MerkleProofLib.verify(proof, root, leaf);
+        return status;
     }
-
-    // function verify(
-    //     bytes32[] memory proof,
-    //     bytes32 root,
-    //     bytes32 leaf
-    // ) internal pure returns (bool) {
-    //     bytes memory input = abi.encodePacked(
-    //         uint256(proof.length),
-    //         proof,
-    //         root,
-    //         leaf
-    //     );
-    //     bytes32 hash = keccak256(input);
-
-    //     for (uint256 i = 0; i < proof.length; i++) {
-    //         if (hash < proof[i]) {
-    //             hash = keccak256(abi.encodePacked(hash, proof[i]));
-    //         } else {
-    //             hash = keccak256(abi.encodePacked(proof[i], hash));
-    //         }
-    //     }
-    //     bool status = (hash == root);
-    //     require(status, "MERKLE PROOF VERIFICATION FAILED");
-    //     return status;
-    // }
 }

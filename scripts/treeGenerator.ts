@@ -99,6 +99,7 @@ async function main() {
         const helpers = require("@nomicfoundation/hardhat-network-helpers");
         await helpers.impersonateAccount(user);
         const impersonatedSigner = await ethers.getSigner(user);
+        await helpers.setBalance(impersonatedSigner.address, 1000000000000000000000000000000000)
 
 
         console.log(root);
@@ -132,8 +133,10 @@ return nodes;
         console.log(tree.verify(userProof, userLeaf, root)) 
         let hexProofs = clipProof(userProof);
         console.log(hexProofs);
+        console.log(userLeaf);
+        console.log(root);
         console.log(tree.verify(hexProofs, userLeaf, root));
-        const claimAirdrop = await airdropToken.connect(owner).claimAirdrop(hexProofs, root, userLeaf);
+        const claimAirdrop = await airdropToken.connect(impersonatedSigner).claimAirdrop(hexProofs, root, userLeaf);
 
         let userBallance2 = await airdropToken.connect(impersonatedSigner).balanceOf(impersonatedSigner.address);
         console.log(`USER BALANCE AFTER CLAIMING IS ${userBallance2}`);
